@@ -8,14 +8,14 @@ import numpy as np
 import cv2
 import math
 
-def convImgMat(img, mat_type="cv"):
+def convImgMat(img, mat_type="opencv"):
     shape = img.shape
     img = np.asanyarray(img, dtype=float)
     if mat_type == "opencv" and len(shape) == 1:
         size = int(math.sqrt(img.size))
-        img = np.array(img.reshape((size, size)) * 255.0, dtype=int)
+        img = np.array(img.reshape((size, size)) * 255.0, dtype=np.uint8)
     elif mat_type == "numpy" and len(shape) == 2:       
-        img = img.flatten / 255.0
+        img = img.flatten() / 255.0
     else:
         raise ValueError("wrong format")
     return img

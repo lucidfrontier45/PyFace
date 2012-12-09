@@ -60,8 +60,9 @@ class _BaseFaceRecognizer(BaseEstimator, ClassifierMixin, TransformerMixin):
     
     def retriveClosestIdx(self, faces):
         faces = np.asarray(faces)
+        features = self.transform(faces)
         if isinstance(self.classifier_, KNeighborsClassifier):
-            neigh_dist, neigh_ind = self.classifier_.kneighbors(faces)
+            neigh_dist, neigh_ind = self.classifier_.kneighbors(features)
             return neigh_ind.flatten()
         else:
             return None
@@ -77,7 +78,7 @@ class _BaseFaceRecognizer(BaseEstimator, ClassifierMixin, TransformerMixin):
     def initByOlivetti(self):
         olivetti = fetch_olivetti_faces()
         faces = olivetti.data
-        labels = olivetti.target
+        labels = [0] * len(faces)
         return self.fit(faces, labels)
     
 class EigenFace(_BaseFaceRecognizer):

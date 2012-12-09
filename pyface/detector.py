@@ -22,7 +22,24 @@ def detectFaces(gray_img, detector, flags=cv.CV_HAAR_SCALE_IMAGE, min_size=(64, 
         faces.append(face)
     return faces
 
-def detectOneFace(gray_img, detector, flags=cv.CV_HAAR_SCALE_IMAGE, min_size=(64, 64)):
+def detectOneFace(gray_img, detector, flags=cv.CV_HAAR_SCALE_IMAGE, 
+                  min_size=(64, 64), resize="min_size"):
+    
+    roi = detectOneFaceROI(gray_img, detector, flags, min_size)
+    if roi is None:
+        return None
+    x, y, w, h = roi
+    face = np.array(gray_img[y:y+h, x:x+w])
+    if resize =="min_size":
+        face = cv2.resize(face, min_size, interpolation=cv.CV_INTER_AREA)
+    elif isinstance(resize, (list, tuple)):
+        face = cv2.resize(face, resize, interpolation=cv.CV_INTER_AREA)
+    else:
+        pass
+    return face
+
+def detectOneFaceROI(gray_img, detector, flags=cv.CV_HAAR_SCALE_IMAGE, 
+                  min_size=(64, 64)):
     rects = detector.detectMultiScale(gray_img, scaleFactor=1.1, minNeighbors=3,
             minSize=min_size, flags=flags)
     if len(rects) == 0:
@@ -31,9 +48,7 @@ def detectOneFace(gray_img, detector, flags=cv.CV_HAAR_SCALE_IMAGE, min_size=(64
     sizes = [w * h for x, y, w, h in rects]
     largest_idx = np.argmax(sizes)
     x, y, w, h = rects[largest_idx]
-    face = np.array(gray_img[y:y+h, x:x+w])
-    face = cv2.resize(face, min_size, interpolation=cv.CV_INTER_AREA)
-    return face
+    return (x, y, w, h)
 
 class FaceDetector(object):
     def __init__(self, detector, flags=cv.CV_HAAR_SCALE_IMAGE, min_size=(64, 64)):
@@ -45,10 +60,16 @@ class FaceDetector(object):
         self.min_size_ = min_size
         
     def detectFaces(self, gray_img):
-        return detectFaces(gray_img, self.detector_, self.flags_, self.min_size_)
+        return detectFaces(gray_img, self.detector_, self.flags_,
+                            self.min_size_)
 
-    def detectOneFace(self, gray_img):
-        return detectOneFace(gray_img, self.detector_, self.flags_, self.min_size_)
+    def detectOneFace(self, gray_img, resize="min_size"):
+        return detectOneFace(gray_img, self.detector_, self.flags_,
+                              self.min_size_, resize=resize)
+        
+    def detectOneFaceROI(self, gray_img):
+        return detectOneFaceROI(gray_img, self.detector_, self.flags_,
+                            self.min_size_)
 
 if __name__ == "__main__":
     import sys
