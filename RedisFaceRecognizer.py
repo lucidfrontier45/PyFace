@@ -98,17 +98,39 @@ class RedisRecognizer(object):
 
         feature_coef = self._getFeatureCoef()
         feature = np.dot(face, feature_coef)
-        name_id = self.redis.get("name_id:%s" % (name))
-        if name_id is None:
-            name_id = self.redis.incr("last_name_id")
-            self.redis.set("name:%s" % name_id, name)
-            self.redis.set("name_id:%s" % name, name_id)
-        
-        self.redis.rpush("features", feature.tostring())
-        self.redis.rpush("faces", face.tostring())
-        pic_id = self.redis.incr("last_pic_id")
-        self.redis.hmset("picture:%d"%pic_id,
-                         {"name_id":name_id, "pic_path":img_path})
+
+        while 1:
+            try:
+                curr_last_name_id = int(self.redis.get("last_name_id"))
+                curr_last_pic_id = int(self.redis.get("last_pic_id"))
+                p = self.redis.pipeline()
+                p.watch("name_id:%s" % (name))
+                p.watch("last_name_id")
+                p.multi()
+                name_id = self.redis.get("name_id:%s" % (name))
+                if name_id is None:
+                    name_id = curr_last_name_id + 1
+                    self.redis.set("last_name_id", name_id)
+                    self.redis.set("name:%s" % name_id, name)
+                    self.redis.set("name_id:%s" % name, name_id)
+                p.execute()
+                break
+            except redis.WatchError:
+                continue
+        while 1:
+            try:
+                p.watch("last_pic_id")
+                p.multi()
+                p.rpush("features", feature.tostring())
+                p.rpush("faces", face.tostring())
+                pic_id = curr_last_pic_id + 1
+                p.set("last_pic_id", pic_id)
+                p.hmset("picture:%d"%pic_id, {"name_id":name_id, "pic_path":img_path})
+                p.execute()
+                break
+            except redis.WatchError:
+                continue
+            
         print "hmset picture:%d {'name_id':%s, 'pic_path':%s}" \
                                                 % (pic_id, name_id, img_path)
         return True
