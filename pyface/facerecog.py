@@ -6,7 +6,8 @@ Created on 2012/12/07
 
 import numpy as np
 import cv, cv2
-from pyface import recognizer, detector, utils
+#from pyface import recognizer, detector, utils
+from . import recognizer, detector, utils
 try:
     import cPickle as pickle
 except:

@@ -9,7 +9,8 @@ import cv, cv2
 from scipy.spatial import distance
 from sklearn.manifold.lpp import LPP
 from sklearn.datasets import fetch_olivetti_faces
-from pyface import recognizer, detector, utils
+#from pyface import recognizer, detector, utils
+from . import recognizer, detector, utils
 try:
     import cPickle as pickle
 except:
