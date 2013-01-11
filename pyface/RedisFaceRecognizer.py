@@ -39,7 +39,7 @@ class RedisRecognizer(object):
             self.init_face()
 
     def init_face(self):
-        print "initialize redis face database"
+        #print "initialize redis face database"
         self.init_redis()
         self.init_features()
         self.redis.set("face_init", 1)
@@ -132,8 +132,8 @@ class RedisRecognizer(object):
             except redis.WatchError:
                 continue
             
-        print "hmset picture:%d {'name_id':%s, 'pic_path':%s}" \
-                                                % (pic_id, name_id, img_path)
+        #print "hmset picture:%d {'name_id':%s, 'pic_path':%s}" \
+        #                                        % (pic_id, name_id, img_path)
         return True
 
     def _getFeatures(self):
@@ -157,10 +157,10 @@ class RedisRecognizer(object):
         query_feature = np.dot(face, feature_coef)
         distances = distance.cdist(features, [query_feature]).flatten()
         closest_idx = distances.argmin()
-        print "(idx, distance) = (%d, %f)" %(closest_idx, distances[closest_idx]) 
-        print "hgetall picture:%d" %closest_idx
+        #print "(idx, distance) = (%d, %f)" %(closest_idx, distances[closest_idx]) 
+        #print "hgetall picture:%d" %closest_idx
         closest_pic = self.redis.hgetall("picture:%d" %(closest_idx))
-        print closest_pic
+        #print closest_pic
         name = self.redis.get("name:%s" % (closest_pic["name_id"]))
         closest_face = np.fromstring(self.redis.lindex("faces", closest_idx))
         closest_face = utils.convImgMat(closest_face, "opencv")

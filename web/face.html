@@ -1,0 +1,106 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="UTF-8">
+<script>
+/* ---- Global variable ---- */
+var funcptr;
+/* ---- 0_utility functions ---- */
+
+function getXmlHttpObject() {
+    var xmlhttp;
+    //Win InternetExplorer 用
+    if(window.XMLHttpRequest){
+        //XMLHttpRequest
+        xmlhttp = new XMLHttpRequest();
+    } else if(window.ActiveXObject){
+        try {
+        //Msxml2.XMLHTTP
+            xmlhttp = new ActiveXObject("Msxml2.XMLHTTP");
+        } catch (e) {
+            try {
+            //Microsoft.XMLHTTP
+                xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+            } catch (e2) {
+                return false;
+            }
+        }
+    }else {
+        xmlhttp = false;
+    }
+    return xmlhttp;
+}
+function getID(id){
+    return document.getElementById(id);
+}
+
+function initDB(){
+    var xmlhttp = getXmlHttpObject();
+    var date = new Date();
+    var innerHTML ="";
+    var data = "mode=init"+"&"+date;
+    xmlhttp.open('GET', '/cgi-bin/face.cgi'+"?"+data, true);
+    xmlhttp.setRequestHeader("content-type","application/x-www-form-urlencoded;charset=UTF-8");
+    xmlhttp.onreadystatechange = function() {
+        if( xmlhttp.readyState === 4 && xmlhttp.status === 200 ) {
+            var data = JSON.parse(xmlhttp.responseText);
+            target = document.getElementById("output");
+            target.innerHTML = data["msg"];
+        }
+    };
+    xmlhttp.send(null);
+}
+
+function learn(form) {
+    var formData = new FormData(form);
+    var xmlhttp = getXmlHttpObject();
+    xmlhttp.open('POST', form.action, true);
+    xmlhttp.onreadystatechange = function() {
+        if( xmlhttp.readyState === 4 && xmlhttp.status === 200 ) {
+            var data = JSON.parse(xmlhttp.responseText);
+            target = document.getElementById("output");
+            target.innerHTML = data["msg"];
+        }
+    };
+
+    xmlhttp.send(formData);
+
+    return false; // Prevent page from submitting.
+}
+
+</script>
+</head>
+
+<body>
+    <p> press this button to initialize the DB. </p>
+    <div>
+        <input type="button" value="InitDB" onclick="initDB();"/>
+    </div>
+<br>
+
+<p> Learn the picture. Input your name and choose pictures.
+<form method="POST" action="cgi-bin/face.cgi" enctype="multipart/form-data">
+<input type="hidden" name="mode" value="learn">
+<div>name：<input type="text" name="name"></div>
+<div>files :
+    <input type="file" name="file[]" multiple="multiple">
+</div>
+<input type="button" value="learn", onclick="learn(this.form);">
+<input type="reset" value="reset">
+</form>
+<br>
+
+<p> Predict the pearson of the picture.</p>
+<form method="POST" action="cgi-bin/face.cgi" enctype="multipart/form-data">
+<input type="hidden" name="mode" value="predict">
+<div>file :
+    <input type="file" name="file[]">
+</div>
+<input type="button" value="predict", onclick="learn(this.form);">
+<input type="reset" value="reset">
+</form>
+
+<br>
+<div id="output">output: </div>
+</body>
+</html>
