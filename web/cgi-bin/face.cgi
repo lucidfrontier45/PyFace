@@ -124,11 +124,16 @@ mode = form["mode"].value
 HOME_DIR = "/home/pyface/"
 hdb_path = "/home/pyface/face.hdb"
 
-model = RedisRecognizer("/home/pyface/cascade_dat/haarcascades/haarcascade_frontalface_default.xml")
+haar_cascade_dir = "/usr/local/share/OpenCV/haarcascades/"
+model = RedisRecognizer(os.path.join(haar_cascade_dir, 
+    "haarcascade_frontalface_default.xml"))
 
 if mode == "init":
     init(model)
-    os.remove(hdb_path)
+    try:
+        os.remove(hdb_path)
+    except:
+        pass
     result = json.dumps({"result":200, "msg":"initialized"})
     print result
 if mode == "predict":
