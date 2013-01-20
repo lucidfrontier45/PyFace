@@ -34,7 +34,7 @@ class RedisRecognizer(object):
         
         self._n_neighbors = n_neighbors
         self._n_components = n_components
-        self._MAXDISTANCE = 0.35
+        self._MAXDISTANCE = 0.4
 
         init_flag = self.redis.get("face_init")
         if init_flag is None:

@@ -20,14 +20,15 @@ import os.path
 import time
 import json
 
-html_template = """<p>input</p>
-<img src=\"data:image/jpg;base64,%s\">
-<p>%s</p>
-<img src=\"data:image/jpg;base64,%s\">
+html_template = """
+input
+<img src=\"data:image/jpg;base64,%s\" width="256">
+%s
+<img src=\"data:image/jpg;base64,%s\" width="128">
 """
 
 html_template2 = """<p>input</p>
-<img src=\"data:image/jpg;base64,%s\">
+<img src=\"data:image/jpg;base64,%s\" width="256">
 <p>%s</p>"""
 
 
@@ -46,11 +47,11 @@ def learn(model, name, img_paths, hdb_path):
                 hdb.open(hdb_path, pytc.HDBOWRITER | pytc.HDBOCREAT)
                 hdb.put(img_path, open(img_path, "rb").read())
                 hdb.close()
-                msg.append("%s learned" % img_path)
+                msg.append("%s learned\r\n" % img_path)
 #                copy_path = os.path.join(HOME_DIR, os.path.basename(img_path))
 #                shutil.copyfile(img_path, copy_path)
             else :
-                msg.append("%s not used" % img_path)
+                msg.append("%s not used\r\n" % img_path)
         except:
             pass
     return json.dumps({"result":200, "msg":msg})
@@ -81,6 +82,7 @@ def predict(model, img_path, hdb_path):
         ret, buf = cv2.imencode(".JPG", closest_face)
 #        cv2.imshow(closest_pic["name"], closest_face)
 #        cv2.waitKey()
+        #result_html = html_template % (input_dat, base64.b64encode(buf), name)
         result_html = html_template % (input_dat, name, base64.b64encode(buf))
         return json.dumps({"result":200, "msg":result_html}) 
     #return json.dumps({"result":200, "input_data":input_data, 

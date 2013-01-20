@@ -77,6 +77,7 @@ def predict(model, img_path, hdb_path):
 
 HOME_DIR = "/home/pyface/"
 model = RedisRecognizer("/home/du/workspace/OpenCV-2.4.2/data/haarcascades/haarcascade_frontalface_default.xml")
+model._MAXDISTANCE=0.4
 hdb_path = "/home/pyface/face.hdb"
 if sys.argv[1] == "-i":
     init(model)
