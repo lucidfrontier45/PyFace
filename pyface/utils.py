@@ -10,7 +10,7 @@ import math
 
 def convImgMat(img, mat_type="opencv"):
     shape = img.shape
-    img = np.asanyarray(img, dtype=float)
+    img = np.asanyarray(img, dtype=np.float32)
     if mat_type == "opencv" and len(shape) == 1:
         size = int(math.sqrt(img.size))
         img = np.array(img.reshape((size, size)) * 255.0, dtype=np.uint8)

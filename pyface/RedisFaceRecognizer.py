@@ -4,6 +4,7 @@ Created on 2012/12/09
 @author: du
 '''
 
+import sys
 import numpy as np
 import cv, cv2
 from scipy.spatial import distance
@@ -33,6 +34,7 @@ class RedisRecognizer(object):
         
         self._n_neighbors = n_neighbors
         self._n_components = n_components
+        self._MAXDISTANCE = 0.35
 
         init_flag = self.redis.get("face_init")
         if init_flag is None:
@@ -59,7 +61,7 @@ class RedisRecognizer(object):
                      "data":lpp._components.tostring()})
             test_features = [f.tostring() for f in features]
             self.redis.rpush("features", *test_features)
-            test_face_data = [np.array(f, dtype=np.float64).tostring() for f in test_faces.data]
+            test_face_data = [np.array(f, dtype=np.float32).tostring() for f in test_faces.data]
             self.redis.rpush("faces", *test_face_data)
             for i in xrange(len(test_faces.data)):
                 self.redis.hmset("picture:%d" % (i),
@@ -79,6 +81,33 @@ class RedisRecognizer(object):
         keys += self.redis.keys("picture:")
         if len(keys) > 0:
             self.redis.delete(*keys)
+
+    def reform_feature(self):
+
+        # obtain face data
+        print "obtaining faces"
+        faces = self.redis.lrange("faces", 0, -1)
+        faces = np.array([np.fromstring(f, dtype=np.float32) for f in faces])
+        
+        
+        # train LPP
+        print "training LPP"
+        lpp = LPP(self._n_neighbors, self._n_components)
+        features = lpp.fit_transform(faces)
+        dim1, dim2 = lpp._components.shape
+        
+        # delete old data 
+        print "deleting old data"
+        self.redis.delete("features")
+        self.redis.delete("feature_coef")
+        
+        # set new data
+        print "setting new data"
+        self.redis.hmset("feature_coef", 
+                    {"dim1":dim1, "dim2":dim2,
+                     "data":lpp._components.tostring()})
+        s_features = [f.tostring() for f in features]
+        self.redis.rpush("features", *s_features)
 
     def detect(self, img, convert=True, resize="min_size"):
         face = self.detector_.detectOneFace(utils.toGray(img), resize=resize)
@@ -149,20 +178,29 @@ class RedisRecognizer(object):
 
     def predict(self, img):
         face = self.detector_.detectOneFace(utils.toGray(img))
+        
+        # in case not face was found
         if face is None:
             return None
+        
         face = utils.convImgMat(face, "numpy")
         features = self._getFeatures()
         feature_coef = self._getFeatureCoef()
         query_feature = np.dot(face, feature_coef)
         distances = distance.cdist(features, [query_feature]).flatten()
         closest_idx = distances.argmin()
-        #print "(idx, distance) = (%d, %f)" %(closest_idx, distances[closest_idx]) 
-        #print "hgetall picture:%d" %closest_idx
+        
+        m_dist = distances[closest_idx]
+        
+        # if the distance exceeds threshold, return unkown
+        if m_dist > self._MAXDISTANCE:
+            return {"name_id":"0", "distance":m_dist}
+        
         closest_pic = self.redis.hgetall("picture:%d" %(closest_idx))
-        #print closest_pic
+        closest_pic["distance"] = m_dist
         name = self.redis.get("name:%s" % (closest_pic["name_id"]))
-        closest_face = np.fromstring(self.redis.lindex("faces", closest_idx))
+        closest_face = np.fromstring(self.redis.lindex("faces", closest_idx),
+                                     dtype=np.float32)
         closest_face = utils.convImgMat(closest_face, "opencv")
         closest_pic["name"] = name
         closest_pic["face"] = closest_face

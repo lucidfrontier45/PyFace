@@ -50,9 +50,11 @@ def predict(model, img_path, hdb_path):
         print "no face was found"
         sys.exit()
     if closest_pic["name_id"] == "0":
+        print model._MAXDISTANCE, closest_pic["distance"]
         print "not in database"
     else:
-#        cv2.imshow("input", img)
+        cv2.imshow("input", img)
+        print model._MAXDISTANCE, closest_pic["distance"]
         name = closest_pic["name"]
         hdb.open(hdb_path, pytc.HDBOREADER)
         input_dat = base64.b64encode(open(img_path, "rb").read())
@@ -65,19 +67,25 @@ def predict(model, img_path, hdb_path):
         x, y, w, h = model.detectROI(closest_img)
         closest_face = closest_img[y:y+h, x:x+w]
         ret, buf = cv2.imencode(".JPG", closest_face)
-#        cv2.imshow(closest_pic["name"], closest_face)
-#        cv2.waitKey()
-        html = html_template % (input_dat, name, base64.b64encode(buf))
-        fp = open("out.html", "wb")
-        fp.write(html)
-        fp.close()
+        cv2.imshow(closest_pic["name"], closest_face)
+        cv2.waitKey()
+#        html = html_template % (input_dat, name, base64.b64encode(buf))
+#        fp = open("out.html", "wb")
+#        fp.write(html)
+#        fp.close()
         print name
 
-HOME_DIR = "/home/du/.pyface/"
+HOME_DIR = "/home/pyface/"
 model = RedisRecognizer("/home/du/workspace/OpenCV-2.4.2/data/haarcascades/haarcascade_frontalface_default.xml")
-hdb_path = "/home/du/.pyface/face.hdb"
+hdb_path = "/home/pyface/face.hdb"
 if sys.argv[1] == "-i":
     init(model)
+    os.remove(hdb_path)
+    hdb.open(hdb_path, pytc.HDBOWRITER | pytc.HDBOCREAT)
+    hdb.close()
+    os.chmod(hdb_path, 0666)
+if sys.argv[1] == "-r":
+    model.reform_feature()
 if sys.argv[1] == "-p":
     predict(model, sys.argv[2], hdb_path)
 if sys.argv[1] == "-l":

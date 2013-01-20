@@ -134,6 +134,9 @@ if mode == "init":
         os.remove(hdb_path)
     except:
         pass
+    hdb.open(hdb_path, pytc.HDBOWRITER | pytc.HDBOCREAT)
+    hdb.close()
+    os.chmod(hdb_path, 0666)
     result = json.dumps({"result":200, "msg":"initialized"})
     print result
 if mode == "predict":
