@@ -2,6 +2,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta charset="UTF-8">
+<style type="text/css">
+CSS:
+img:after {
+display: block;
+content: attr(title);
+}
+</style>
 <script>
 /* ---- Global variable ---- */
 var funcptr;
@@ -74,12 +81,13 @@ function learn(form) {
 </head>
 
 <body>
+<!--
     <p> press this button to initialize the DB. </p>
     <div>
         <input type="button" value="InitDB" onclick="initDB();"/>
     </div>
 <br>
-
+-->
 <p> Learn the picture. Input your name and choose pictures.
 <form method="POST" action="cgi-bin/face.cgi" enctype="multipart/form-data">
 <input type="hidden" name="mode" value="learn">
