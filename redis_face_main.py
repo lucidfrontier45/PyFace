@@ -49,12 +49,12 @@ def predict(model, img_path, hdb_path):
     if closest_pic is None:
         print "no face was found"
         sys.exit()
-    if closest_pic["name_id"] == "0":
-        print model._MAXDISTANCE, closest_pic["distance"]
+    if closest_pic["name_id"] in ("-1", "0"):
+        print model._max_distance, closest_pic["distance"], closest_pic["name_id"]
         print "not in database"
     else:
         cv2.imshow("input", img)
-        print model._MAXDISTANCE, closest_pic["distance"]
+        print model._max_distance, closest_pic["distance"]
         name = closest_pic["name"]
         hdb.open(hdb_path, pytc.HDBOREADER)
         input_dat = base64.b64encode(open(img_path, "rb").read())
@@ -77,8 +77,8 @@ def predict(model, img_path, hdb_path):
 
 HOME_DIR = "/home/pyface/"
 model = RedisRecognizer("/home/du/workspace/OpenCV-2.4.2/data/haarcascades/haarcascade_frontalface_default.xml")
-model._MAXDISTANCE=0.4
 hdb_path = "/home/pyface/face.hdb"
+model._max_distance = 10.0
 if sys.argv[1] == "-i":
     init(model)
     os.remove(hdb_path)

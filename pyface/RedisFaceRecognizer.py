@@ -8,10 +8,10 @@ import sys
 import numpy as np
 import cv, cv2
 from scipy.spatial import distance
-from sklearn.manifold.lpp import LPP
+from sklearn.decomposition import PCA
 from sklearn.datasets import fetch_olivetti_faces
 #from pyface import recognizer, detector, utils
-from . import recognizer, detector, utils
+from . import detector, utils
 try:
     import cPickle as pickle
 except:
@@ -21,10 +21,9 @@ import redis
 DUMMY_PATH = "dummy_path"
 
 class RedisRecognizer(object):
-    def __init__(self, haar_detector_xml, n_neighbors=5,
-                  n_components=20, feature_coef=None,
+    def __init__(self, haar_detector_xml, n_components=20, feature_coef=None,
                  host='localhost', port=6379, db=0, password=None,
-                 socket_timeout=None, connection_pool=None,
+                 socket_timeout=None, connection_pool=None, max_distance=10.0,
                  charset='utf-8', errors='strict', unix_socket_path=None):
         self._cascade_xml = haar_detector_xml
         self.detector_ = detector.FaceDetector(haar_detector_xml)
@@ -32,9 +31,8 @@ class RedisRecognizer(object):
                         connection_pool, charset, errors, unix_socket_path)
         self.feature_coef_ = feature_coef
         
-        self._n_neighbors = n_neighbors
         self._n_components = n_components
-        self._MAXDISTANCE = 0.4
+        self._max_distance = max_distance
 
         init_flag = self.redis.get("face_init")
         if init_flag is None:
@@ -50,15 +48,17 @@ class RedisRecognizer(object):
         if self.feature_coef_ is None:
             self.feature_coef_ = self.redis.get("feature_coef")
         if self.feature_coef_ is None:
-            lpp = LPP(self._n_neighbors, self._n_components)
+            pca = PCA(self._n_components)
             test_faces = fetch_olivetti_faces()
-            features = lpp.fit_transform(test_faces.data)
+            features = np.array(pca.fit_transform(test_faces.data),
+                                dtype=np.float32)
             self.redis.set("name:0", "olivetti_faces")
             self.redis.set("name_id:olivetti_faces", 0)
-            dim1, dim2 = lpp._components.shape
+            feature_coef = np.array(pca.components_.T, np.float64)
+            dim1, dim2 = feature_coef.shape
             self.redis.hmset("feature_coef", 
                     {"dim1":dim1, "dim2":dim2,
-                     "data":lpp._components.tostring()})
+                     "data":feature_coef.tostring()})
             test_features = [f.tostring() for f in features]
             self.redis.rpush("features", *test_features)
             test_face_data = [np.array(f, dtype=np.float32).tostring() for f in test_faces.data]
@@ -90,11 +90,12 @@ class RedisRecognizer(object):
         faces = np.array([np.fromstring(f, dtype=np.float32) for f in faces])
         
         
-        # train LPP
-        print "training LPP"
-        lpp = LPP(self._n_neighbors, self._n_components)
-        features = lpp.fit_transform(faces)
-        dim1, dim2 = lpp._components.shape
+        # train PCA
+        print "training PCA"
+        pca = PCA(self._n_components)
+        features = pca.fit_transform(faces, dtype=np.float32)
+        feature_coef = np.array(pca.components_.T, np.float64)
+        dim1, dim2 = feature_coef.shape
         
         # delete old data 
         print "deleting old data"
@@ -105,7 +106,7 @@ class RedisRecognizer(object):
         print "setting new data"
         self.redis.hmset("feature_coef", 
                     {"dim1":dim1, "dim2":dim2,
-                     "data":lpp._components.tostring()})
+                     "data":feature_coef.tostring()})
         s_features = [f.tostring() for f in features]
         self.redis.rpush("features", *s_features)
 
@@ -127,7 +128,7 @@ class RedisRecognizer(object):
             return False
 
         feature_coef = self._getFeatureCoef()
-        feature = np.dot(face, feature_coef)
+        feature = np.array(np.dot(face, feature_coef), dtype=np.float32)
 
         while 1:
             try:
@@ -167,13 +168,15 @@ class RedisRecognizer(object):
 
     def _getFeatures(self):
         features = self.redis.lrange("features", 0, -1)
-        features = np.array([np.fromstring(f) for f in features])
+        features = np.array([np.fromstring(f, dtype=np.float32)
+                              for f in features])
         return features
     
     def _getFeatureCoef(self):
         feature_coef = self.redis.hgetall("feature_coef")
         dim1, dim2 = int(feature_coef["dim1"]), int(feature_coef["dim2"])
-        feature_coef = np.fromstring(feature_coef["data"]).reshape(dim1, dim2)
+        feature_coef = np.fromstring(feature_coef["data"], 
+                            dtype=np.float64).reshape(dim1, dim2)
         return feature_coef
 
     def predict(self, img):
@@ -193,7 +196,7 @@ class RedisRecognizer(object):
         m_dist = distances[closest_idx]
         
         # if the distance exceeds threshold, return unkown
-        if m_dist > self._MAXDISTANCE:
+        if m_dist > self._max_distance:
             return {"name_id":"0", "distance":m_dist}
         
         closest_pic = self.redis.hgetall("picture:%d" %(closest_idx))

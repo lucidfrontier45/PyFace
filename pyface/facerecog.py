@@ -21,7 +21,7 @@ class FaceDetectRecognizer(object):
         if m_recognizer:
             self.recognizer_ = m_recognizer
         else:
-            self.recognizer_ = recognizer.LaplacianFace(5, 15)
+            self.recognizer_ = recognizer.EigenFace(20)
             self.recognizer_.initByOlivetti()
         
     def detect(self, imgs, labels):

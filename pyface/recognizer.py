@@ -7,7 +7,7 @@ Created on 2012/12/05
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin, TransformerMixin
 from sklearn.decomposition import PCA
-from sklearn.manifold.lpp import LPP
+from sklearn.manifold.lpp import LocalityPreservingProjection as LPP
 from sklearn.neighbors.classification import KNeighborsClassifier
 from sklearn.datasets import fetch_olivetti_faces
 
@@ -85,10 +85,3 @@ class EigenFace(_BaseFaceRecognizer):
     def __init__(self, n_components=0.8, copy=True, whiten=False):
         transformer = PCA(n_components, copy, whiten)
         _BaseFaceRecognizer.__init__(self, transformer=transformer)
-
-class LaplacianFace(_BaseFaceRecognizer):
-    def __init__(self, n_neighbors=None, n_components=2, kernel_param=10.0):
-        transformer = LPP(n_neighbors=n_neighbors,
-                n_components=n_components, kernel_param=kernel_param)
-        _BaseFaceRecognizer.__init__(self, transformer=transformer)
-        
